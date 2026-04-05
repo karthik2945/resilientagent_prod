@@ -1,0 +1,10 @@
+OPTIMAL task1_latency_spike: 0.9050 done=True
+OPTIMAL task2_prediction_drift: 0.9750 done=True
+OPTIMAL task3_cascading_failure: 0.9600 done=True
+RANDOM task1_latency_spike: 0.0000 done=False
+RANDOM task2_prediction_drift: 0.5950 done=True
+RANDOM task3_cascading_failure: 0.0200 done=False
+EXPLOIT rollback_on_latency: done=False score=0.0000 BLOCKED=True
+AVG_OPTIMAL: 0.9467
+AVG_RANDOM: 0.2050
+GAP: 0.7417

@@ -1,0 +1,61 @@
+INFO: Starting inference — model=llama-3.3-70b-versatile  base_url=https://api.groq.com/openai/v1
+INFO: 
+--- task1_latency_spike ---
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 1 | check_metrics -> inference_service
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 2 | read_logs -> inference_service
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 3 | optimize_batch -> inference_service
+INFO: Task resolved!
+INFO: Score: 0.9050
+INFO: 
+--- task2_prediction_drift ---
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 1 | analyze_drift -> ml_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 2 | check_deployment -> ml_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 3 | rollback_model -> ml_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 4 | verify_fix -> ml_model
+INFO: Task resolved!
+INFO: Score: 1.0000
+INFO: 
+--- task3_cascading_failure ---
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 1 | check_metrics -> primary_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 2 | read_logs -> primary_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 3 | restart_service -> primary_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 4 | scale_service -> fallback_model
+INFO: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+INFO: Step 5 | verify_fix -> primary_model
+INFO: Task resolved!
+INFO: Score: 0.9600
+
+==================================================
+FINAL INFERENCE RESULTS
+==================================================
+{
+  "model": "llama-3.3-70b-versatile",
+  "results": {
+    "latency_spike": {
+      "score": 0.905,
+      "steps": 3,
+      "resolved": true
+    },
+    "prediction_drift": {
+      "score": 1.0,
+      "steps": 4,
+      "resolved": true
+    },
+    "cascading_failure": {
+      "score": 0.96,
+      "steps": 5,
+      "resolved": true
+    }
+  }
+}
