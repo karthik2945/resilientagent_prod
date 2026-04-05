@@ -18,7 +18,6 @@ api:
   state: GET /state
   grader: POST /grader
   tasks: GET /tasks
-  baseline: GET /baseline
 baseline_scores:
   task1_latency_spike: 0.80
   task2_prediction_drift: 1.00
