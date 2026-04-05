@@ -59,7 +59,8 @@ inference_service, ml_model, primary_model, fallback_model
 """
 
 
-
+class ResetRequest(BaseModel):
+    task_id: Optional[str] = "task1_latency_spike"
 
 
 class StepRequest(BaseModel):
@@ -91,21 +92,10 @@ def build_user_prompt(task_id: str, obs, history: list) -> str:
 
 
 @app.post("/reset")
-async def reset(request: Request):
-    """Reset environment for a new task."""
+async def reset(body: ResetRequest = Body(default=ResetRequest())):
+    """Reset environment for a new task. Accepts empty body or JSON with task_id."""
     env = get_env()
-    task_id = "task1_latency_spike"
-    
-    try:
-        body_bytes = await request.body()
-        if body_bytes and body_bytes.strip():
-            payload = json.loads(body_bytes)
-            if isinstance(payload, dict):
-                task_id = payload.get("task_id", task_id)
-    except Exception:
-        pass
-        
-    obs = env.reset(task_id=task_id)
+    obs = env.reset(task_id=body.task_id)
     return {
         "observation": {
             "metrics": obs.metrics,
@@ -198,18 +188,18 @@ def baseline():
             ("verify_fix", "primary_model"),
         ]),
     ]
-    
+
     results = {}
     all_details = {}
-    
+
     for task_id, action_sequence in tasks:
         obs = env.reset(task_id=task_id)
         steps_data = []
-        
+
         for i, (action_type, target) in enumerate(action_sequence):
             action = ResilientAgentAction(action_type=action_type, target=target)
             obs = env.step(action)
-            
+
             step_info = {
                 "step": i + 1,
                 "action_type": action_type,
@@ -219,10 +209,10 @@ def baseline():
                 "logs": obs.recent_logs[-1:] if obs.recent_logs else []
             }
             steps_data.append(step_info)
-            
+
             if obs.done:
                 break
-        
+
         score = env.grade()
         short_name = task_id.split("_", 1)[1]
         results[short_name] = {
@@ -231,7 +221,7 @@ def baseline():
             "resolved": env._model_healthy
         }
         all_details[short_name] = steps_data
-    
+
     return {"results": results, "details": all_details}
 
 
@@ -251,7 +241,6 @@ def get_llm_action(client, model: str, task_id: str, obs, history: list) -> dict
         )
         reply = response.choices[0].message.content.strip()
 
-        # Strip markdown fences if the model wraps them
         if reply.startswith("```"):
             reply = reply.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
@@ -266,51 +255,47 @@ def get_llm_action(client, model: str, task_id: str, obs, history: list) -> dict
 @app.get("/llm-inference")
 def llm_inference():
     """Run REAL LLM agent on all tasks using API."""
-    # Read evaluator environment variables
     api_base_url = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
     model_name = os.environ.get("MODEL_NAME", "gpt-4")
-    
-    # Check for API key (Handles HF_TOKEN, OPENAI_API_KEY or GROQ_API_KEY)
+
     api_key = os.environ.get("HF_TOKEN") or os.environ.get("OPENAI_API_KEY") or os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise HTTPException(
             status_code=400,
             detail="No API key found. Set HF_TOKEN or OPENAI_API_KEY environment variable."
         )
-    
-    # Initialize OpenAI-compatible client
+
     client = OpenAI(
         base_url=api_base_url,
         api_key=api_key
     )
-    
+
     env = get_env()
-    
+
     tasks = [
         ("task1_latency_spike", "Diagnose and fix ML model latency spike"),
         ("task2_prediction_drift", "Detect and remediate model prediction drift"),
         ("task3_cascading_failure", "Resolve cascading ML service failure")
     ]
-    
+
     results = {}
     all_details = {}
-    
+
     for task_id, task_desc in tasks:
         obs = env.reset(task_id=task_id)
         steps_data = []
         history = []
         max_steps = 10
-        
+
         for step_num in range(max_steps):
-            # Use STRONG prompt from inference.py
             action_dict = get_llm_action(client, model_name, task_id, obs, history)
-            
+
             action_type = action_dict.get("action_type", "check_metrics")
             target = action_dict.get("target", "inference_service")
-            
+
             action = ResilientAgentAction(action_type=action_type, target=target)
             obs = env.step(action)
-            
+
             step_info = {
                 "step": step_num + 1,
                 "action_type": action_type,
@@ -325,10 +310,10 @@ def llm_inference():
                 "target": target,
                 "reward": obs.reward
             })
-            
+
             if obs.done:
                 break
-        
+
         score = env.grade()
         short_name = task_id.split("_", 1)[1]
         results[short_name] = {
@@ -337,7 +322,7 @@ def llm_inference():
             "resolved": env._model_healthy
         }
         all_details[short_name] = steps_data
-    
+
     return {
         "model": "llama-3.3-70b-versatile (Groq)",
         "results": results,
