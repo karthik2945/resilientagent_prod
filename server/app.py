@@ -92,19 +92,18 @@ def build_user_prompt(task_id: str, obs, history: list) -> str:
 
 @app.post("/reset")
 async def reset(request: Request):
-    """Reset environment for a new task. Accepts empty body or JSON with task_id."""
+    """Reset environment for a new task."""
     env = get_env()
     task_id = "task1_latency_spike"
     
-    # Gracefully handle empty body (hackathon validator sends no body)
     try:
-        body = await request.body()
-        if body and body.strip():
-            payload = await request.json()
+        body_bytes = await request.body()
+        if body_bytes and body_bytes.strip():
+            payload = json.loads(body_bytes)
             if isinstance(payload, dict):
                 task_id = payload.get("task_id", task_id)
     except Exception:
-        pass  # No body or invalid JSON — use default task_id
+        pass
         
     obs = env.reset(task_id=task_id)
     return {
